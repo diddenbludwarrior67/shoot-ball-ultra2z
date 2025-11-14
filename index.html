@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Ninja vs Red Balls - ULTIMATE FIX</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            background: #111;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            image-rendering: pixelated;
+        }
+        #ui {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            user-select: none;
+            z-index: 1000;
+        }
+        #hud {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(180, 120, 255, 0.5);
+            backdrop-filter: blur(10px);
+            animation: pulse 2s infinite;
+            pointer-events: auto;
+            min-width: 180px;
+        }
+        .hud-item {
+            font-size: 18px;
+            margin: 6px 0;
+            text-shadow: 0 0 10px rgba(180, 120, 255, 0.6);
+        }
+        #menuToggle, #shopToggle, #settingsToggle {
+            position: absolute;
+            top: 20px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            border: 1px solid rgba(180, 120, 255, 0.6);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.3s;
+            pointer-events: auto;
+            font-size: 14px;
+        }
+        #menuToggle { right: 160px; }
+        #shopToggle { right: 80px; }
+        #settingsToggle { right: 20px; }
+        #menuToggle:hover, #shopToggle:hover, #settingsToggle:hover {
+            background: rgba(180, 120, 255, 0.3);
+            transform: scale(1.08);
+            box-shadow: 0 0 20px rgba(180,120,255,0.4);
+        }
+        
+        .panel {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 550px;
+            max-height: 85vh;
+            overflow-y: auto;
+            background: rgba(10,10,20,0.98);
+            border: 3px solid rgba(180, 120, 255, 0.8);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(20px);
+            transition: transform 0.4s ease-out;
+            pointer-events: auto;
+            box-shadow: 0 0 50px rgba(180, 120, 255, 0.5);
+            z-index: 2000;
+        }
+        .panel.open {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .panel-title {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 25px;
+            color: #d4b3ff;
+            text-shadow: 0 0 15px rgba(180, 120, 255, 0.8);
+        }
+        .close-panel {
+            position: absolute;
+            top: 20px; right: 25px;
+            background: none;
+            border: none;
+            font-size: 30px;
+            color: #ccc;
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 2001;
+        }
+        .close-panel:hover { color: #ff66cc; transform: scale(1.2); }
+        
+        .item {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(180, 120, 255, 0.4);
+            border-radius: 12px;
+            padding: 18px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.4s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(180,120,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .item:hover::before { left: 100%; }
+        .item:hover {
+            background: rgba(180, 120, 255, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(180, 120, 255, 0.3);
+        }
+        .item.owned {
+            border-color: #b3ff99;
+            background: rgba(180, 255, 120, 0.15);
+            box-shadow: 0 0 20px rgba(180,255,120,0.4);
+        }
+        .item-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #e6ccff;
+        }
+        .item-desc {
+            color: #ccc;
+            font-size: 14px;
+        }
+        .item-cost {
+            color: #ff99cc;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .buy-btn {
+            background: rgba(180, 120, 255, 0.4);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+        .buy-btn:hover:not(:disabled) {
+            background: rgba(180, 120, 255, 0.7);
+            transform: scale(1.05);
+        }
+        .buy-btn:disabled {
+            background: #444;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .settings-group {
+            margin: 20px 0;
+        }
+        .settings-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #e6ccff;
+            font-size: 16px;
+        }
+        .settings-group input, .settings-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(180,120,255,0.5);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .color-preview {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            display: inline-block;
+            margin-left: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        #startBtn {
+            background: linear-gradient(45deg, #ff66cc, #b478ff);
+            border: none;
+            padding: 20px 60px;
+            font-size: 24px;
+            border-radius: 15px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(255,102,204,0.4);
+            width: 100%;
+        }
+        #startBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255,102,204,0.6);
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.98);
+            padding: 40px 60px;
+            border-radius: 25px;
+            text-align: center;
+            border: 3px solid #ff3366;
+            display: none;
+            backdrop-filter: blur(15px);
+            animation: deathPulse 1.5s infinite;
+            max-width: 500px;
+            z-index: 3000;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(180, 120, 255, 0.5); }
+            50% { box-shadow: 0 0 35px rgba(180, 120, 255, 0.8); }
+        }
+        @keyframes deathPulse {
+            0%, 100% { box-shadow: 0 0 25px #ff3366; }
+            50% { box-shadow: 0 0 50px #ff0033; }
+        }
+        #pauseOverlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            z-index: 1500;
+        }
+        #pauseOverlay.active { display: block; }
+        canvas.blur { filter: blur(4px); transition: filter 0.3s ease; }
+        canvas.unblur { filter: none; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="pauseOverlay"></div>
+    
+    <div id="ui">
+        <!-- Main Menu -->
+        <div id="mainMenu" class="panel open">
+            <div class="panel-title">🥷 NINJA vs RED BALLS</div>
+            <p style="text-align:center; font-size:18px; margin-bottom:40px; color:#ccc;">
+                Reach 100,000 points in 35 minutes or DIE
+            </p>
+            <button id="startBtn">START MISSION</button>
+            <p style="margin-top:30px; font-size:14px; opacity:0.8;">
+                WASD: Move | SPACE: Shoot | Mouse: Aim | ESC: Pause
+            </p>
+        </div>
+
+        <!-- In-game HUD -->
+        <div id="hud" style="display:none;">
+            <div class="hud-item" id="score">Score: 0</div>
+            <div class="hud-item" id="timer">Time: 35:00</div>
+        </div>
+        <button id="menuToggle" style="display:none;">MENU</button>
+        <button id="shopToggle" style="display:none;">SHOP</button>
+        <button id="settingsToggle" style="display:none;">SETTINGS</button>
+
+        <!-- Shop Panel -->
+        <div id="shop" class="panel">
+            <button class="close-panel">×</button>
+            <div class="panel-title">🔫 WEAPON ARMORY</div>
+            <div class="item" data-id="0">
+                <div>
+                    <div class="item-name">🔫 Aura Pistol</div>
+                    <div class="item-desc">Fast precise glowing shots</div>
+                </div>
+                <button class="buy-btn" disabled>OWNED</button>
+            </div>
+            <div class="item" data-id="1">
+                <div>
+                    <div class="item-name">⚔️ Void Katana</div>
+                    <div class="item-desc">Slash nearby enemies instantly</div>
+                </div>
+                <div class="item-cost">12k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="2">
+                <div>
+                    <div class="item-name">🥷 Shadow Shuriken</div>
+                    <div class="item-desc">Homing star projectiles</div>
+                </div>
+                <div class="item-cost">22k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="3">
+                <div>
+                    <div class="item-name">🔫 Plasma Rifle</div>
+                    <div class="item-desc">Rapid fire spread barrage</div>
+                </div>
+                <div class="item-cost">32k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="4">
+                <div>
+                    <div class="item-name">🚀 God Blaster</div>
+                    <div class="item-desc">Devastating energy beam</div>
+                </div>
+                <div class="item-cost">48k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="5">
+                <div>
+                    <div class="item-name">💥 Eternal Nova</div>
+                    <div class="item-desc">Screen-clearing explosion</div>
+                </div>
+                <div class="item-cost">65k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="6">
+                <div>
+                    <div class="item-name">⚡ Quantum Disruptor</div>
+                    <div class="item-desc">Slows + massive damage</div>
+                </div>
+                <div class="item-cost">82k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="7">
+                <div>
+                    <div class="item-name">🎯 Photon Railgun</div>
+                    <div class="item-desc">Piercing high-velocity shots</div>
+                </div>
+                <div class="item-cost">95k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="20">
+                <div>
+                    <div class="item-name">🛡️ Energy Shield</div>
+                    <div class="item-desc">Absorbs 8 hits (Passive)</div>
+                </div>
+                <div class="item-cost">10k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+        </div>
+
+        <!-- Upgrades Panel (Separate) -->
+        <div id="upgrades" class="panel">
+            <button class="close-panel">×</button>
+            <div class="panel-title">⚡ PERFORMANCE UPGRADES</div>
+            <div class="item" data-id="10">
+                <div>
+                    <div class="item-name">💥 Damage +50%</div>
+                    <div class="item-desc">All weapons hit harder</div>
+                </div>
+                <div class="item-cost">18k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="11">
+                <div>
+                    <div class="item-name">🏃 Speed +40%</div>
+                    <div class="item-desc">Lightning-fast movement</div>
+                </div>
+                <div class="item-cost">28k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+            <div class="item" data-id="12">
+                <div>
+                    <div class="item-name">🔥 Fire Rate +25%</div>
+                    <div class="item-desc">Faster weapon cooldowns</div>
+                </div>
+                <div class="item-cost">38k</div>
+                <button class="buy-btn">BUY</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settings" class="panel">
+            <button class="close-panel">×</button>
+            <div class="panel-title">⚙️ CONTROL PANEL</div>
+            <div class="settings-group">
+                <label>Primary Glow Color</label>
+                <div style="display:flex;align-items:center;">
+                    <input type="color" id="primaryColor" value="#b478ff">
+                    <div class="color-preview" id="primaryPreview"></div>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label>UI Transparency</label>
+                <input type="range" id="uiTransparency" min="0.1" max="1.0" step="0.05" value="0.75">
+                <span id="transValue" style="color:#ccc;">0.75</span>
+            </div>
+            <div class="settings-group">
+                <label>Background Color</label>
+                <div style="display:flex;align-items:center;">
+                    <input type="color" id="bgColor" value="#0a0a0f">
+                    <div class="color-preview" id="bgPreview"></div>
+                </div>
+            </div>
+            <button class="buy-btn" style="width:100%; padding:15px; font-size:16px; margin-top:20px;" onclick="applySettings()">APPLY CHANGES</button>
+        </div>
+
+        <div id="gameOver">
+            <h2 style="color:#ff3366; margin-bottom:15px; font-size:32px;">💀 YOU DIED</h2>
+            <p id="finalScore" style="font-size:20px; margin-bottom:20px;"></p>
+            <button id="restartBtn" style="background:#ff3366; padding:15px 40px; font-size:18px; border:none; border-radius:10px; color:white; cursor:pointer; margin:10px;">RESTART</button>
+            <p style="margin-top:25px; font-size:14px; opacity:0.8;">Final Score: <span id="finalScoreNum"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Game state
+        const game = {
+            score: 0,
+            timeLeft: 35 * 60,
+            gameOver: false,
+            paused: true,
+            bossActive: false,
+            nextBossAt: 10000,
+            lastSecond: 35 * 60
+        };
+
+        // Settings
+        let settings = {
+            primaryColor: '#b478ff',
+            uiTransparency: 0.75,
+            bgColor: '#0a0a0f'
+        };
+
+        // Player
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 14,
+            speed: 7,
+            maxSpeed: 7,
+            damageMultiplier: 1,
+            fireRateMultiplier: 1,
+            weapon: 0,
+            shield: 0,
+            maxShield: 0,
+            glowIntensity: 0
+        };
+
+        // Weapons
+        const weapons = [
+            { name: "Aura Pistol", damage: 1.2, fireRate: 9, color: "#d4b3ff", speed: 11, type: "bullet" },
+            { name: "Void Katana", damage: 5, fireRate: 40, color: "#aa77ff", range: 100, type: "slash" },
+            { name: "Shadow Shuriken", damage: 2.5, fireRate: 14, color: "#cc99ff", homing: true, type: "bullet" },
+            { name: "Plasma Rifle", damage: 1.8, fireRate: 6, color: "#66ffcc", speed: 13, spread: 0.25, type: "bullet" },
+            { name: "God Blaster", damage: 15, fireRate: 80, color: "#ffccff", pierce: true, type: "beam" },
+            { name: "Eternal Nova", damage: 75, fireRate: 400, color: "#ffffff", type: "nova" },
+            { name: "Quantum Disruptor", damage: 10, fireRate: 22, color: "#99ccff", slow: 0.6, type: "bullet" },
+            { name: "Photon Railgun", damage: 25, fireRate: 120, color: "#ffff99", speed: 18, pierce: true, type: "bullet" }
+        ];
+
+        const ownedItems = [0];
+        let currentWeapon = 0;
+        let fireCooldown = 0;
+
+        // Entities
+        const enemies = [];
+        const projectiles = [];
+        const particles = [];
+        let boss = null;
+
+        // Input
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space' && !game.paused && !game.gameOver) {
+                e.preventDefault();
+                fireWeapon();
+            }
+            if (e.code === 'Escape') togglePause();
+        });
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        // UI Elements
+        const mainMenu = document.getElementById('mainMenu');
+        const hud = document.getElementById('hud');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const shop = document.getElementById('shop');
+        const upgrades = document.getElementById('upgrades');
+        const settingsPanel = document.getElementById('settings');
+        const menuToggle = document.getElementById('menuToggle');
+        const shopToggle = document.getElementById('shopToggle');
+        const settingsToggle = document.getElementById('settingsToggle');
+        const closePanels = document.querySelectorAll('.close-panel');
+        const itemEls = document.querySelectorAll('.item');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // FIXED Panel Management - NO OVERLAP, CLEAN BLUR
+        function openPanel(panelId) {
+            game.paused = true;
+            canvas.classList.add('blur');
+            pauseOverlay.classList.add('active');
+            
+            // Close ALL panels first
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
+            
+            // Open ONLY target panel
+            const targetPanel = document.getElementById(panelId);
+            targetPanel.classList.add('open');
+        }
+
+        function closeAllPanels() {
+            game.paused = false;
+            canvas.classList.remove('blur');
+            canvas.classList.add('unblur');
+            pauseOverlay.classList.remove('active');
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', restartGame);
+        
+        menuToggle.addEventListener('click', () => openPanel('mainMenu'));
+        shopToggle.addEventListener('click', () => openPanel('shop'));
+        settingsToggle.addEventListener('click', () => openPanel('settings'));
+
+        closePanels.forEach(btn => {
+            btn.addEventListener('click', closeAllPanels);
+        });
+
+        function startGame() {
+            game.paused = false;
+            canvas.classList.remove('blur');
+            canvas.classList.add('unblur');
+            mainMenu.classList.remove('open');
+            hud.style.display = 'block';
+            menuToggle.style.display = 'block';
+            shopToggle.style.display = 'block';
+            settingsToggle.style.display = 'block';
+            pauseOverlay.classList.remove('active');
+        }
+
+        function restartGame() {
+            location.reload();
+        }
+
+        function togglePause() {
+            if (game.gameOver) return;
+            game.paused = !game.paused;
+            if (game.paused) {
+                canvas.classList.add('blur');
+                pauseOverlay.classList.add('active');
+            } else {
+                canvas.classList.remove('blur');
+                canvas.classList.add('unblur');
+                pauseOverlay.classList.remove('active');
+                closeAllPanels();
+            }
+        }
+
+        // Settings
+        document.getElementById('primaryColor').addEventListener('input', e => {
+            document.getElementById('primaryPreview').style.background = e.target.value;
+        });
+        document.getElementById('bgColor').addEventListener('input', e => {
+            document.getElementById('bgPreview').style.background = e.target.value;
+        });
+        document.getElementById('uiTransparency').addEventListener('input', e => {
+            document.getElementById('transValue').textContent = e.target.value;
+        });
+
+        window.applySettings = function() {
+            settings.primaryColor = document.getElementById('primaryColor').value;
+            settings.uiTransparency = parseFloat(document.getElementById('uiTransparency').value);
+            settings.bgColor = document.getElementById('bgColor').value;
+            closeAllPanels();
+        };
+
+        // Shop Logic
+        itemEls.forEach(el => {
+            const btn = el.querySelector('.buy-btn');
+            const id = parseInt(el.dataset.id);
+            btn.addEventListener('click', () => buyItem(id));
+        });
+
+        function buyItem(id) {
+            let cost;
+            if (id <= 7) {
+                cost = [0,12000,22000,32000,48000,65000,82000,95000][id];
+                if (!ownedItems.includes(id)) {
+                    if (game.score >= cost) {
+                        game.score -= cost;
+                        ownedItems.push(id);
+                        if (id > currentWeapon) {
+                            currentWeapon = id;
+                            player.weapon = id;
+                        }
+                    }
+                } else {
+                    currentWeapon = id;
+                    player.weapon = id;
+                }
+            } else if (id === 20) {
+                cost = 10000;
+                if (game.score >= cost && !ownedItems.includes(20)) {
+                    game.score -= cost;
+                    ownedItems.push(20);
+                    player.maxShield = 8;
+                    player.shield = 8;
+                }
+            } else {
+                const costs = {10:18000, 11:28000, 12:38000};
+                cost = costs[id];
+                if (game.score >= cost && !ownedItems.includes(id)) {
+                    game.score -= cost;
+                    ownedItems.push(id);
+                    if (id === 10) player.damageMultiplier *= 1.5;
+                    if (id === 11) { player.maxSpeed *= 1.4; player.speed = player.maxSpeed; }
+                    if (id === 12) player.fireRateMultiplier *= 0.75;
+                }
+            }
+            updateShop();
+            updateHUD();
+        }
+
+        function updateShop() {
+            itemEls.forEach(el => {
+                const id = parseInt(el.dataset.id);
+                const btn = el.querySelector('.buy-btn');
+                if (ownedItems.includes(id)) {
+                    el.classList.add('owned');
+                    if (id <= 7) {
+                        btn.textContent = id === currentWeapon ? "EQUIPPED" : "EQUIP";
+                    } else {
+                        btn.textContent = "OWNED";
+                        btn.disabled = true;
+                    }
+                } else {
+                    el.classList.remove('owned');
+                    const cost = id === 20 ? 10000 : 
+                               (id <= 7 ? [0,12000,22000,32000,48000,65000,82000,95000][id] : 
+                               {10:18000,11:28000,12:38000}[id]);
+                    btn.textContent = "BUY";
+                    btn.disabled = game.score < cost;
+                }
+            });
+        }
+
+        // ENEMIES BIGGER (10-16px)
+        function spawnEnemy() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            const margin = 120;
+            switch(side) {
+                case 0: x = Math.random() * canvas.width; y = -margin; break;
+                case 1: x = canvas.width + margin; y = Math.random() * canvas.height; break;
+                case 2: x = Math.random() * canvas.width; y = canvas.height + margin; break;
+                case 3: x = -margin; y = Math.random() * canvas.height; break;
+            }
+            enemies.push({
+                x, y,
+                radius: 10 + Math.random() * 6, // BIGGER 10-16px
+                speed: 1.8 + Math.random() * 2.2,
+                color: "#ff3366",
+                points: 120,
+                health: 1 + Math.floor(game.score / 20000)
+            });
+        }
+
+        // Rest of game code remains the same...
+        function spawnBoss() {
+            const isGirl = Math.random() < 0.5;
+            boss = {
+                x: Math.random() * (canvas.width - 400) + 200,
+                y: -250,
+                radius: 85,
+                speed: 1.5,
+                health: 1200 + game.score / 100,
+                maxHealth: 1200 + game.score / 100,
+                color: isGirl ? "#ff66cc" : "#cc66ff",
+                name: isGirl ? "Sigma Girl" : "Sigma Boy",
+                attackTimer: 0
+            };
+            game.bossActive = true;
+        }
+
+        function fireWeapon() {
+            if (fireCooldown > 0 || game.paused) return;
+            const w = weapons[currentWeapon];
+            const effectiveRate = Math.floor(w.fireRate * player.fireRateMultiplier);
+            fireCooldown = effectiveRate;
+
+            if (w.type === "bullet") {
+                const shots = w.spread ? 5 : 1;
+                for (let i = 0; i < shots; i++) {
+                    const angle = Math.atan2(mouseY - player.y, mouseX - player.x) + 
+                                (i - shots/2) * (w.spread || 0);
+                    projectiles.push({
+                        x: player.x, y: player.y,
+                        vx: Math.cos(angle) * (w.speed || 10),
+                        vy: Math.sin(angle) * (w.speed || 10),
+                        damage: w.damage * player.damageMultiplier,
+                        color: w.color,
+                        homing: w.homing,
+                        slow: w.slow,
+                        pierce: w.pierce,
+                        life: 100,
+                        piercesLeft: w.pierce ? 3 : 0
+                    });
+                }
+            } else if (w.type === "slash") {
+                createParticles(player.x, player.y, 30, w.color);
+                enemies.forEach(e => {
+                    if (dist(player, e) < w.range) {
+                        damageEnemy(e, w.damage * player.damageMultiplier * 3);
+                    }
+                });
+            } else if (w.type === "nova") {
+                createParticles(player.x, player.y, 120, w.color);
+                enemies.forEach(e => damageEnemy(e, w.damage * player.damageMultiplier));
+                if (boss) damageBoss(w.damage * player.damageMultiplier * 2);
+            }
+        }
+
+        function damageEnemy(e, dmg) {
+            e.health -= dmg;
+            if (e.health <= 0) {
+                game.score += e.points;
+                createParticles(e.x, e.y, 20, e.color);
+                enemies.splice(enemies.indexOf(e), 1);
+                checkBossSpawn();
+            }
+        }
+
+        function damageBoss(dmg) {
+            boss.health -= dmg;
+            createParticles(boss.x + (Math.random()-0.5)*50, boss.y + (Math.random()-0.5)*50, 15, "#ffff99");
+            if (boss.health <= 0) {
+                game.score += 15000;
+                createParticles(boss.x, boss.y, 150, boss.color);
+                boss = null;
+                game.bossActive = false;
+                game.nextBossAt += 10000;
+            }
+        }
+
+        function checkBossSpawn() {
+            if (!game.bossActive && game.score >= game.nextBossAt) spawnBoss();
+        }
+
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30 + Math.random() * 25,
+                    color,
+                    size: 1 + Math.random() * 3
+                });
+            }
+        }
+
+        function dist(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        let mouseX = 0, mouseY = 0;
+        canvas.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        canvas.addEventListener('click', () => {
+            if (!game.paused && !game.gameOver) fireWeapon();
+        });
+
+        function updateHUD() {
+            document.getElementById('score').textContent = `Score: ${game.score.toLocaleString()}`;
+            const mins = Math.floor(game.timeLeft / 60).toString().padStart(2, '0');
+            const secs = Math.floor(game.timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `Time: ${mins}:${secs}`;
+        }
+
+        let lastTime = 0;
+        function gameLoop(time) {
+            if (game.gameOver) return;
+            const deltaTime = Math.min((time - lastTime) / 1000, 0.05);
+            lastTime = time;
+
+            if (!game.paused) {
+                if (Math.floor(game.timeLeft) <= 0) {
+                    endGame(false);
+                    return;
+                }
+
+                const moveSpeed = player.maxSpeed * deltaTime * 60;
+                if (keys['w']) player.y = Math.max(player.radius, player.y - moveSpeed);
+                if (keys['s']) player.y = Math.min(canvas.height - player.radius, player.y + moveSpeed);
+                if (keys['a']) player.x = Math.max(player.radius, player.x - moveSpeed);
+                if (keys['d']) player.x = Math.min(canvas.width - player.radius, player.x + moveSpeed);
+
+                if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - deltaTime * 60);
+
+                if (Math.random() < 0.08 + game.score / 200000) spawnEnemy();
+
+                enemies.forEach((e, i) => {
+                    const dx = player.x - e.x;
+                    const dy = player.y - e.y;
+                    const distance = Math.hypot(dx, dy);
+                    if (distance > 0) {
+                        const speed = e.speed * deltaTime * 60;
+                        e.x += (dx / distance) * speed;
+                        e.y += (dy / distance) * speed;
+                    }
+
+                    if (dist(player, e) < player.radius + e.radius) {
+                        if (player.shield > 0) {
+                            player.shield--;
+                            createParticles(e.x, e.y, 25, "#00ffcc");
+                            enemies.splice(i, 1);
+                        } else {
+                            endGame(false);
+                        }
+                    }
+                });
+
+                projectiles.forEach((p, pi) => {
+                    if (p.homing && enemies.length) {
+                        const target = enemies.reduce((a, b) => dist(p, a) < dist(p, b) ? a : b);
+                        const angle = Math.atan2(target.y - p.y, target.x - p.x);
+                        p.vx += Math.cos(angle) * 0.5 * deltaTime * 60;
+                        p.vy += Math.sin(angle) * 0.5 * deltaTime * 60;
+                    }
+                    p.x += p.vx * deltaTime * 60;
+                    p.y += p.vy * deltaTime * 60;
+                    p.life -= deltaTime * 60;
+
+                    if (p.life <= 0 || p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
+                        projectiles.splice(pi, 1);
+                        return;
+                    }
+
+                    for (let ei = 0; ei < enemies.length; ei++) {
+                        const e = enemies[ei];
+                        if (dist(p, e) < e.radius) {
+                            damageEnemy(e, p.damage);
+                            if (p.slow) e.speed *= 0.65;
+                            if (p.pierce) p.piercesLeft--;
+                            else {
+                                projectiles.splice(pi, 1);
+                                createParticles(p.x, p.y, 10, p.color);
+                                break;
+                            }
+                        }
+                    }
+                });
+
+                if (boss) {
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    if (Math.abs(boss.x - centerX) > 150) boss.x += (centerX > boss.x ? 1.2 : -1.2) * deltaTime * 60;
+                    if (boss.y < centerY) boss.y += 1.8 * deltaTime * 60;
+
+                    boss.attackTimer += deltaTime * 60;
+                    if (boss.attackTimer > 80) {
+                        boss.attackTimer = 0;
+                        for (let i = 0; i < 16; i++) {
+                            const angle = (i / 16) * Math.PI * 2;
+                            projectiles.push({
+                                x: boss.x, y: boss.y,
+                                vx: Math.cos(angle) * 6,
+                                vy: Math.sin(angle) * 6,
+                                damage: 3,
+                                color: boss.color,
+                                life: 180,
+                                enemy: true
+                            });
+                        }
+                    }
+
+                    if (dist(player, boss) < player.radius + boss.radius) {
+                        if (player.shield > 0) {
+                            player.shield--;
+                        } else {
+                            endGame(false);
+                        }
+                    }
+                }
+
+                const currentSecond = Math.floor(game.timeLeft);
+                if (currentSecond < game.lastSecond) {
+                    game.timeLeft = currentSecond;
+                    game.lastSecond = currentSecond;
+                }
+            }
+
+            particles.forEach((p, i) => {
+                p.x += p.vx * deltaTime * 60 * 0.02;
+                p.y += p.vy * deltaTime * 60 * 0.02;
+                p.vx *= 0.97;
+                p.vy *= 0.97;
+                p.life -= deltaTime * 60;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+
+            player.glowIntensity += 0.15 * deltaTime * 60;
+
+            if (!game.paused) {
+                updateHUD();
+                updateShop();
+                if (game.score >= 100000) endGame(true);
+            }
+
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function render() {
+            const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            bgGradient.addColorStop(0, settings.bgColor);
+            bgGradient.addColorStop(1, '#000');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life / 50;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            enemies.forEach(e => {
+                ctx.save();
+                ctx.shadowColor = e.color;
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = e.color;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            if (boss) {
+                const pulse = 1 + Math.sin(Date.now() * 0.01) * 0.2;
+                ctx.save();
+                ctx.translate(boss.x, boss.y);
+                ctx.scale(pulse, pulse);
+                ctx.shadowColor = boss.color;
+                ctx.shadowBlur = 30;
+                ctx.fillStyle = boss.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(boss.name, 0, boss.radius + 30);
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                ctx.fillRect(-boss.radius, -boss.radius - 35, boss.radius * 2, 10);
+                ctx.fillStyle = boss.health > boss.maxHealth * 0.5 ? '#66ff66' : '#ff4444';
+                ctx.fillRect(-boss.radius, -boss.radius - 35, (boss.health / boss.maxHealth) * boss.radius * 2, 10);
+                ctx.restore();
+            }
+
+            projectiles.forEach(p => {
+                ctx.save();
+                ctx.shadowColor = p.enemy ? '#ff6699' : p.color;
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.enemy ? 8 : 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            if (player.shield > 0) {
+                const shieldPulse = Math.sin(Date.now() * 0.03) * 0.4 + 0.6;
+                const sGrad = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.radius + 35);
+                sGrad.addColorStop(0, `rgba(0,255,204,${0.7 * shieldPulse})`);
+                sGrad.addColorStop(1, 'rgba(0,255,204,0)');
+                ctx.fillStyle = sGrad;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius + 35, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const glowSize = 30 + Math.sin(player.glowIntensity) * 15;
+            const pGrad = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, glowSize);
+            pGrad.addColorStop(0, `rgba(255,255,255,0.95)`);
+            pGrad.addColorStop(0.3, settings.primaryColor);
+            pGrad.addColorStop(1, 'rgba(180,120,255,0)');
+            ctx.shadowColor = settings.primaryColor;
+            ctx.shadowBlur = 35;
+            ctx.fillStyle = pGrad;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius + 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = settings.primaryColor;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = weapons[currentWeapon].color;
+            ctx.font = 'bold 16px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(weapons[currentWeapon].name, player.x, player.y - player.radius - 15);
+            if (player.shield > 0) {
+                ctx.fillStyle = '#00ffcc';
+                ctx.font = 'bold 15px Courier New';
+                ctx.fillText(`🛡️ ${player.shield}`, player.x, player.y + player.radius + 20);
+            }
+        }
+
+        function endGame(win) {
+            game.gameOver = true;
+            game.paused = true;
+            canvas.classList.add('blur');
+            const go = document.getElementById('gameOver');
+            go.style.display = 'block';
+            document.getElementById('finalScore').textContent = win 
+                ? `🎉 VICTORY ACHIEVED!` 
+                : `☠️ MISSION FAILED`;
+            document.getElementById('finalScoreNum').textContent = game.score.toLocaleString();
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+        });
+
+        updateShop();
+        updateHUD();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
+
